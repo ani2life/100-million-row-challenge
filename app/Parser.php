@@ -107,8 +107,5 @@ final class Parser
         fseek($out, -2, SEEK_CUR);
         fwrite($out, "\n}");
         fclose($out);
-
-        $peakMemoryReal = memory_get_peak_usage(true);
-        echo "실제 최대 메모리 사용량: " . round($peakMemoryReal / 1024 / 1024, 2) . " MB\n";
     }
 }
