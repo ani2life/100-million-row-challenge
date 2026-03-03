@@ -28,6 +28,7 @@ final class Parser
         $bufferSize = 64 * 1024;
         $leftover = '';
         $rowList = [];
+        $keyMap = [];
 
         while (!feof($handle)) {
             $chunk = fread($handle, $bufferSize);
@@ -53,12 +54,14 @@ final class Parser
                 $len = $lineEnd - $offset - 40;
 
                 if ($len > 0) {
-                    $key = substr($chunk, $start, $len);
+                    $combinedKey = substr($chunk, $start, $len);
+                    $key = crc32($combinedKey);
 
                     if (isset($rowList[$key])) {
                         $rowList[$key]++;
                     } else {
                         $rowList[$key] = 1;
+                        $keyMap[$key] = $combinedKey;
                     }
                 }
 
@@ -75,7 +78,8 @@ final class Parser
 
         // 정렬 및 출력을 위해 중첩 구조로 재구성
         $finalList = [];
-        foreach ($rowList as $combinedKey => $count) {
+        foreach ($rowList as $key => $count) {
+            $combinedKey = $keyMap[$key];
             $date = substr($combinedKey, -10);
             $slug = substr($combinedKey, 0, -11);
             $finalList[$slug][$date] = $count;
