@@ -22,26 +22,18 @@ final class Parser
         ini_set('memory_limit', -1);
         gc_disable();
 
-        $handle = fopen($inputPath, 'rb');
-        stream_set_read_buffer($handle, 64 * 1024);
-
         $bufferSize = 64 * 1024;
-        $leftover = '';
+        $handle = fopen($inputPath, 'rb');
+        stream_set_read_buffer($handle, $bufferSize);
+
         $rowList = [];
         $keyMap = [];
 
         while (!feof($handle)) {
             $chunk = fread($handle, $bufferSize);
-
-            // 이전 루프에서 남은 데이터가 있다면 이번 청크 앞에 붙임
-            if ($leftover !== '') {
-                $chunk = "{$leftover}{$chunk}";
-                $leftover = '';
-            }
-
-            $offset = 0;
             $chunkLen = strlen($chunk);
 
+            $offset = 0;
             while ($offset + 50 < $chunkLen) {
                 $lineEnd = strpos($chunk, "\n", $offset + 50);
 
@@ -68,9 +60,9 @@ final class Parser
                 $offset = $lineEnd + 1;
             }
 
-            // 남은 부분 보관 (결합 횟수 최소화)
-            if ($offset < $chunkLen) {
-                $leftover = substr($chunk, $offset);
+            // 처리되지 않은 나머지 바이트만큼 파일 포인터 되돌림
+            if ($offset < $chunkLen && !feof($handle)) {
+                fseek($handle, $offset - $chunkLen, SEEK_CUR);
             }
         }
 
@@ -88,7 +80,7 @@ final class Parser
         $rowList = $finalList;
 
         $out = fopen($outputPath, 'wb+');
-        stream_set_write_buffer($out, 4 * 1024 * 1024);
+        stream_set_write_buffer($out, $bufferSize);
 
         fwrite($out, "{\n");
 
