@@ -70,10 +70,10 @@ final class Parser
 
         // 정렬 및 출력을 위해 중첩 구조로 재구성
         $finalList = [];
-        reset($keyList);
+        $keyIdx = 0;
         foreach ($rowList as $key => $count) {
-            $combinedKey = current($keyList);
-            next($keyList);
+            $combinedKey = $keyList[$keyIdx];
+            ++$keyIdx;
             $date = substr($combinedKey, -10);
             $slug = substr($combinedKey, 0, -11);
             $finalList[$slug][$date] = $count;
