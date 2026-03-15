@@ -11,6 +11,8 @@ use function feof;
 use function strpos;
 use function substr;
 use function strlen;
+use function hash;
+use function unpack;
 use function ksort;
 use function stream_set_read_buffer;
 use function stream_set_write_buffer;
@@ -47,14 +49,13 @@ final class Parser
                 $len = $lineEnd - $offset - 40;
 
                 if ($len > 0) {
-                    $combinedKey = substr($chunk, $start, $len);
-                    $key = unpack('Q', hash('xxh64', $combinedKey, true))[1];
+                    $key = unpack('Q', hash('xxh64', substr($chunk, $start, $len), true))[1];
 
                     if (isset($rowList[$key])) {
                         $rowList[$key]++;
                     } else {
                         $rowList[$key] = 1;
-                        $keyList[$keyIdx] = $combinedKey;
+                        $keyList[$keyIdx] = substr($chunk, $start, $len);
                         ++$keyIdx;
                     }
                 }
@@ -73,12 +74,10 @@ final class Parser
         // 정렬 및 출력을 위해 중첩 구조로 재구성
         $finalList = [];
         $keyIdx = 0;
-        foreach ($rowList as $key => $count) {
+        foreach ($rowList as $count) {
             $combinedKey = $keyList[$keyIdx];
             ++$keyIdx;
-            $date = substr($combinedKey, -10);
-            $slug = substr($combinedKey, 0, -11);
-            $finalList[$slug][$date] = $count;
+            $finalList[substr($combinedKey, 0, -11)][substr($combinedKey, -10)] = $count;
         }
         unset($rowList);
         $rowList = $finalList;
@@ -96,11 +95,12 @@ final class Parser
                 $dateLines[] = "        \"{$date}\": {$count}";
             }
 
-            $output = "    \"\\/blog\\/{$slug}\": {\n"
+            fwrite(
+                $out,
+                "    \"\\/blog\\/{$slug}\": {\n"
                     . implode(",\n", $dateLines)
-                    . "\n    },\n";
-
-            fwrite($out, $output);
+                    . "\n    },\n",
+            );
         }
 
         // 마지막 ",\n" (2바이트) 제거를 위해 포인터 이동
